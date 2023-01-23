@@ -37,7 +37,7 @@ abstract class AbstractLicenseMojo extends AbstractMojo {
      * @since 1.0
      */
     @Parameter(property = "robtimus.license.filename", defaultValue = "LICENSE.txt", required = true)
-    String filename;
+    String licenseFilename;
 
     /**
      * The maximum number of parent directories to check. This allows locating the license file to abort early if it could not be found.
@@ -63,7 +63,7 @@ abstract class AbstractLicenseMojo extends AbstractMojo {
             return;
         }
 
-        Path licenseFile = findLicenseFile(project.getBasedir().toPath(), filename, maxParentCount, getLog());
+        Path licenseFile = findLicenseFile(project.getBasedir().toPath(), licenseFilename, maxParentCount, getLog());
         processLicenseFile(licenseFile);
     }
 

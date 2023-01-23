@@ -64,7 +64,7 @@ class SiteIndexMojoTest {
             Log log = mock(Log.class);
             mojo.setLog(log);
             mojo.project = mock(MavenProject.class);
-            mojo.title = "Overview";
+            mojo.siteIndexTitle = "Overview";
             mojo.badgePatterns = new String[] {
                     "https://github.com/.*/badge.svg",
                     "https://img.shields.io/.*?",

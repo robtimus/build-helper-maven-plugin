@@ -88,7 +88,7 @@ public class SiteIndexMojo extends AbstractMojo {
      * @since 1.0
      */
     @Parameter(property = "robtimus.site-index.title", defaultValue = "Overview", required = true)
-    String title;
+    String siteIndexTitle;
 
     /**
      * A set of patterns to use to recognize badges, based on the URL.
@@ -164,7 +164,7 @@ public class SiteIndexMojo extends AbstractMojo {
     @SuppressWarnings("nls")
     private void writeHeader(Writer output) throws IOException {
         output.append("<head>\n");
-        output.append("  <title>").append(title).append("</title>\n");
+        output.append("  <title>").append(siteIndexTitle).append("</title>\n");
         output.append("</head>\n");
         output.append('\n');
     }

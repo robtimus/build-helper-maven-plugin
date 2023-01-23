@@ -60,14 +60,14 @@ class AbstractLicenseMojoTest {
             };
             Log log = mock(Log.class);
             mojo.setLog(log);
-            mojo.filename = "LICENSE.txt";
+            mojo.licenseFilename = "LICENSE.txt";
             mojo.project = mock(MavenProject.class);
 
             when(mojo.project.getBasedir()).thenReturn(new File("."));
 
             assertDoesNotThrow(mojo::execute);
 
-            assertEquals(Paths.get(mojo.filename).toAbsolutePath(), capturedLicenseFile.get());
+            assertEquals(Paths.get(mojo.licenseFilename).toAbsolutePath(), capturedLicenseFile.get());
 
             verify(log).debug(Messages.license.fileFound(capturedLicenseFile.get()));
             verifyNoMoreInteractions(log);
