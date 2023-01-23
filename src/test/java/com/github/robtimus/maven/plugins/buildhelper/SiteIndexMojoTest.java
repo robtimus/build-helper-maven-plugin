@@ -17,6 +17,7 @@
 
 package com.github.robtimus.maven.plugins.buildhelper;
 
+import static com.github.robtimus.maven.plugins.buildhelper.SiteIndexMojo.getProjectRoot;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import java.io.File;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -36,9 +38,12 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -50,6 +55,34 @@ import com.github.robtimus.junit.support.extension.testresource.TestResource;
 
 @SuppressWarnings("nls")
 class SiteIndexMojoTest {
+
+    @Test
+    @DisplayName("execute")
+    void testExecute() {
+        AtomicReference<Path> capturedBaseDir = new AtomicReference<>();
+        AtomicReference<Path> capturedSourceFile = new AtomicReference<>();
+        AtomicReference<Path> capturedTargetFile = new AtomicReference<>();
+
+        SiteIndexMojo mojo = new SiteIndexMojo() {
+            @Override
+            void generateSiteIndex(Path baseDir, Path sourceFile, Path targetFile) throws MojoExecutionException, MojoFailureException {
+                capturedBaseDir.set(baseDir);
+                capturedSourceFile.set(sourceFile);
+                capturedTargetFile.set(targetFile);
+            }
+        };
+        mojo.project = mock(MavenProject.class);
+        mojo.sourceFile = new File("README.md");
+        mojo.targetFile = new File("src/site/markdown/index.md");
+
+        when(mojo.project.getBasedir()).thenReturn(new File("."));
+
+        assertDoesNotThrow(mojo::execute);
+
+        assertEquals(Paths.get("."), capturedBaseDir.get());
+        assertEquals(Paths.get("README.md"), capturedSourceFile.get());
+        assertEquals(Paths.get("src/site/markdown/index.md"), capturedTargetFile.get());
+    }
 
     @Nested
     @DisplayName("generateSiteIndex")
@@ -75,19 +108,23 @@ class SiteIndexMojoTest {
 
             when(mojo.project.getUrl()).thenReturn("https://robtimus.github.io/build-helper-maven-plugin/");
 
-            Path sourceFile = Paths.get(URI.create("memory:/README.md"));
-            Path targetFile = Paths.get(URI.create("memory:/src/site/markdown/index.md"));
+            Path baseDir = Paths.get(URI.create("memory:/base"));
+            Path sourceFile = baseDir.resolve("README.md");
+            Path targetFile = baseDir.resolve("src/site/markdown/index.md");
 
             MemoryFileSystemProvider.clear();
 
             assertDoesNotThrow(() -> {
+                Files.createDirectories(baseDir);
                 MemoryFileSystemProvider.setContent(sourceFile, input.getBytes());
-                mojo.generateSiteIndex(sourceFile, targetFile);
+                mojo.generateSiteIndex(baseDir, sourceFile, targetFile);
             });
 
             String output = assertDoesNotThrow(() -> new String(MemoryFileSystemProvider.getContent(targetFile)));
 
             assertEquals(expected, output);
+
+            verify(log).debug(Messages.siteIndex.projectRoot(baseDir));
 
             verify(mojo.project).getUrl();
             verify(log).debug(Messages.siteIndex.removedProjectUrl(
@@ -154,6 +191,62 @@ class SiteIndexMojoTest {
         }
 
         @Test
+        @DisplayName("source file outside project")
+        void testSourceFileOutsideProject(@TestResource("site-index-input.md") @EOL(EOL.LF) @Encoding("UTF-8") String input) {
+            SiteIndexMojo mojo = new SiteIndexMojo();
+            Log log = mock(Log.class);
+            mojo.setLog(log);
+            mojo.project = mock(MavenProject.class);
+            mojo.encoding = "UTF-8";
+
+            Path baseDir = Paths.get(URI.create("memory:/base"));
+            Path sourceFile = baseDir.resolve("../README.md");
+            Path targetFile = baseDir.resolve("src/site/markdown/index.md");
+
+            MemoryFileSystemProvider.clear();
+
+            assertDoesNotThrow(() -> {
+                Files.createDirectories(baseDir);
+                MemoryFileSystemProvider.setContent(sourceFile, input.getBytes());
+            });
+
+            MojoFailureException exception = assertThrows(MojoFailureException.class, () -> mojo.generateSiteIndex(baseDir, sourceFile, targetFile));
+            assertEquals(Messages.siteIndex.sourceOutsideProject(), exception.getMessage());
+
+            verify(log).debug(Messages.siteIndex.projectRoot(baseDir));
+
+            verifyNoMoreInteractions(log, mojo.project);
+        }
+
+        @Test
+        @DisplayName("target file outside project")
+        void testTargetFileOutsideProject(@TestResource("site-index-input.md") @EOL(EOL.LF) @Encoding("UTF-8") String input) {
+            SiteIndexMojo mojo = new SiteIndexMojo();
+            Log log = mock(Log.class);
+            mojo.setLog(log);
+            mojo.project = mock(MavenProject.class);
+            mojo.encoding = "UTF-8";
+
+            Path baseDir = Paths.get(URI.create("memory:/base"));
+            Path sourceFile = baseDir.resolve("README.md");
+            Path targetFile = baseDir.resolve("../src/site/markdown/index.md");
+
+            MemoryFileSystemProvider.clear();
+
+            assertDoesNotThrow(() -> {
+                Files.createDirectories(baseDir);
+                MemoryFileSystemProvider.setContent(sourceFile, input.getBytes());
+            });
+
+            MojoFailureException exception = assertThrows(MojoFailureException.class, () -> mojo.generateSiteIndex(baseDir, sourceFile, targetFile));
+            assertEquals(Messages.siteIndex.targetOutsideProject(), exception.getMessage());
+
+            verify(log).debug(Messages.siteIndex.projectRoot(baseDir));
+
+            verifyNoMoreInteractions(log, mojo.project);
+        }
+
+        @Test
         @DisplayName("target directory create error")
         void testTargetDirectoryCreateError(@TestResource("site-index-input.md") @EOL(EOL.LF) @Encoding("UTF-8") String input) {
             SiteIndexMojo mojo = new SiteIndexMojo();
@@ -162,25 +255,30 @@ class SiteIndexMojoTest {
             mojo.project = mock(MavenProject.class);
             mojo.encoding = "UTF-8";
 
-            Path sourceFile = Paths.get(URI.create("memory:/README.md"));
-            Path targetFile = Paths.get(URI.create("memory:/src/site/markdown/index.md"));
-            Path siteDir = Paths.get(URI.create("memory:/src/site"));
+            Path baseDir = Paths.get(URI.create("memory:/base"));
+            Path sourceFile = baseDir.resolve("README.md");
+            Path siteDir = baseDir.resolve("src/site");
+            Path targetFile = siteDir.resolve("markdown/index.md");
 
             MemoryFileSystemProvider.clear();
 
             assertDoesNotThrow(() -> {
+                Files.createDirectories(baseDir);
                 MemoryFileSystemProvider.setContent(sourceFile, input.getBytes());
 
                 Files.createDirectories(siteDir);
                 Files.getFileAttributeView(siteDir, MemoryFileAttributeView.class).setReadOnly(true);
             });
 
-            MojoExecutionException exception = assertThrows(MojoExecutionException.class, () -> mojo.generateSiteIndex(sourceFile, targetFile));
+            MojoExecutionException exception = assertThrows(MojoExecutionException.class,
+                    () -> mojo.generateSiteIndex(baseDir, sourceFile, targetFile));
             AccessDeniedException cause = assertInstanceOf(AccessDeniedException.class, exception.getCause());
             assertEquals(cause.getMessage(), exception.getMessage());
             assertEquals(siteDir.toString(), cause.getFile());
 
-            verifyNoInteractions(log, mojo.project);
+            verify(log).debug(Messages.siteIndex.projectRoot(baseDir));
+
+            verifyNoMoreInteractions(log, mojo.project);
         }
 
         @Test
@@ -192,12 +290,14 @@ class SiteIndexMojoTest {
             mojo.project = mock(MavenProject.class);
             mojo.encoding = "UTF-8";
 
-            Path sourceFile = Paths.get(URI.create("memory:/README.md"));
-            Path targetFile = Paths.get(URI.create("memory:/src/site/markdown/index.md"));
+            Path baseDir = Paths.get(URI.create("memory:/base"));
+            Path sourceFile = baseDir.resolve("README.md");
+            Path targetFile = baseDir.resolve("src/site/markdown/index.md");
 
             MemoryFileSystemProvider.clear();
 
             assertDoesNotThrow(() -> {
+                Files.createDirectories(baseDir);
                 MemoryFileSystemProvider.setContent(sourceFile, input.getBytes());
 
                 Files.createDirectories(targetFile.getParent());
@@ -205,12 +305,15 @@ class SiteIndexMojoTest {
                 Files.getFileAttributeView(targetFile, MemoryFileAttributeView.class).setReadOnly(true);
             });
 
-            MojoExecutionException exception = assertThrows(MojoExecutionException.class, () -> mojo.generateSiteIndex(sourceFile, targetFile));
+            MojoExecutionException exception = assertThrows(MojoExecutionException.class,
+                    () -> mojo.generateSiteIndex(baseDir, sourceFile, targetFile));
             AccessDeniedException cause = assertInstanceOf(AccessDeniedException.class, exception.getCause());
             assertEquals(cause.getMessage(), exception.getMessage());
             assertEquals(targetFile.toString(), cause.getFile());
 
-            verifyNoInteractions(log, mojo.project);
+            verify(log).debug(Messages.siteIndex.projectRoot(baseDir));
+
+            verifyNoMoreInteractions(log, mojo.project);
         }
 
         @Test
@@ -221,18 +324,85 @@ class SiteIndexMojoTest {
             mojo.setLog(log);
             mojo.skipSiteIndex = true;
 
-            Path sourceFile = Paths.get(URI.create("memory:/README.md"));
-            Path targetFile = Paths.get(URI.create("memory:/src/site/markdown/index.md"));
+            Path baseDir = Paths.get(URI.create("memory:/base"));
+            Path sourceFile = baseDir.resolve("README.md");
+            Path targetFile = baseDir.resolve("src/site/markdown/index.md");
 
             MemoryFileSystemProvider.clear();
 
-            assertDoesNotThrow(() -> mojo.generateSiteIndex(sourceFile, targetFile));
+            assertDoesNotThrow(() -> mojo.generateSiteIndex(baseDir, sourceFile, targetFile));
 
             assertFalse(Files.isRegularFile(targetFile));
 
             verify(log).info(Messages.siteIndex.skipped());
 
             verifyNoMoreInteractions(log);
+        }
+    }
+
+    @Nested
+    @DisplayName("getProjectRoot")
+    class GetProjectRoot {
+
+        private Path baseDir = Paths.get(URI.create("memory:/level1/level2/level3"));
+
+        @BeforeEach
+        void initFileSystem() {
+            MemoryFileSystemProvider.clear();
+
+            assertDoesNotThrow(() -> Files.createDirectories(baseDir));
+        }
+
+        @Test
+        @DisplayName("current dir is Git root")
+        void testCurrentDirIsGitRoot() {
+            assertDoesNotThrow(() -> {
+                for (Path dir = baseDir; dir != null; dir = dir.getParent()) {
+                    Files.createFile(dir.resolve("pom.xml"));
+                }
+                Files.createDirectories(baseDir.resolve(".git"));
+            });
+
+            assertEquals(baseDir, getProjectRoot(baseDir));
+        }
+
+        @Test
+        @DisplayName("parent dir is Git root")
+        void testParentDirIsGitRoot() {
+            assertDoesNotThrow(() -> {
+                for (Path dir = baseDir; dir != null; dir = dir.getParent()) {
+                    Files.createFile(dir.resolve("pom.xml"));
+                }
+                Files.createDirectories(baseDir.resolve("../.git"));
+            });
+
+            assertEquals(baseDir.getParent(), getProjectRoot(baseDir));
+        }
+
+        @Test
+        @DisplayName("only parent contains pom")
+        void testOnlyParentDirContainsPom() {
+            assertDoesNotThrow(() -> Files.createFile(baseDir.resolve("../pom.xml")));
+
+            assertEquals(baseDir.getParent(), getProjectRoot(baseDir));
+        }
+
+        @Test
+        @DisplayName("parent does not contain pom")
+        void testParentDirDoesNotContainPom() {
+            assertEquals(baseDir, getProjectRoot(baseDir));
+        }
+
+        @Test
+        @DisplayName("each folder has pom")
+        void testEachFolderHasPom() {
+            assertDoesNotThrow(() -> {
+                for (Path dir = baseDir; dir != null; dir = dir.getParent()) {
+                    Files.createFile(dir.resolve("pom.xml"));
+                }
+            });
+
+            assertEquals(Paths.get(URI.create("memory:/")), getProjectRoot(baseDir));
         }
     }
 

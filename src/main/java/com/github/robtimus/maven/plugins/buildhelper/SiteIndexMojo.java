@@ -17,6 +17,8 @@
 
 package com.github.robtimus.maven.plugins.buildhelper;
 
+import static com.github.robtimus.maven.plugins.buildhelper.MojoUtils.isGitRoot;
+import static com.github.robtimus.maven.plugins.buildhelper.MojoUtils.isMavenProjectFolder;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -30,6 +32,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -72,7 +75,7 @@ public class SiteIndexMojo extends AbstractMojo {
      * 1.0
      */
     @Parameter(property = "robtimus.site-index.sourceFile", defaultValue = "${project.basedir}/README.md", required = true)
-    private File sourceFile;
+    File sourceFile;
 
     /**
      * The Markdown site index to generate.
@@ -80,7 +83,7 @@ public class SiteIndexMojo extends AbstractMojo {
      * @since 1.0
      */
     @Parameter(property = "robtimus.site-index.targetFile", defaultValue = "${project.basedir}/src/site/markdown/index.md", required = true)
-    private File targetFile;
+    File targetFile;
 
     /**
      * The HTML title to add.
@@ -115,14 +118,23 @@ public class SiteIndexMojo extends AbstractMojo {
     boolean skipSiteIndex;
 
     @Override
-    public void execute() throws MojoExecutionException {
-        generateSiteIndex(sourceFile.toPath(), targetFile.toPath());
+    public void execute() throws MojoExecutionException, MojoFailureException {
+        generateSiteIndex(project.getBasedir().toPath(), sourceFile.toPath(), targetFile.toPath());
     }
 
-    void generateSiteIndex(Path sourceFile, Path targetFile) throws MojoExecutionException {
+    void generateSiteIndex(Path baseDir, Path sourceFile, Path targetFile) throws MojoExecutionException, MojoFailureException {
         if (skipSiteIndex) {
             getLog().info(Messages.siteIndex.skipped());
             return;
+        }
+
+        Path projectRoot = getProjectRoot(baseDir);
+        getLog().debug(Messages.siteIndex.projectRoot(projectRoot));
+        if (!sourceFile.toAbsolutePath().normalize().startsWith(projectRoot)) {
+            throw new MojoFailureException(Messages.siteIndex.sourceOutsideProject());
+        }
+        if (!targetFile.toAbsolutePath().normalize().startsWith(projectRoot)) {
+            throw new MojoFailureException(Messages.siteIndex.targetOutsideProject());
         }
 
         Charset charset = getCharset();
@@ -142,6 +154,25 @@ public class SiteIndexMojo extends AbstractMojo {
         }
 
         getLog().info(Messages.siteIndex.generated(sourceFile, targetFile));
+    }
+
+    static Path getProjectRoot(Path baseDir) {
+        Path dir = baseDir.toAbsolutePath().normalize();
+        if (isGitRoot(dir)) {
+            return dir;
+        }
+        Path parent = dir.getParent();
+        while (parent != null) {
+            if (isGitRoot(parent)) {
+                return parent;
+            }
+            if (!isMavenProjectFolder(parent)) {
+                return dir;
+            }
+            dir = parent;
+            parent = parent.getParent();
+        }
+        return dir;
     }
 
     Charset getCharset() {

@@ -17,6 +17,8 @@
 
 package com.github.robtimus.maven.plugins.buildhelper;
 
+import static com.github.robtimus.maven.plugins.buildhelper.MojoUtils.isGitRoot;
+import static com.github.robtimus.maven.plugins.buildhelper.MojoUtils.isMavenProjectFolder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.apache.maven.plugin.AbstractMojo;
@@ -98,14 +100,6 @@ abstract class AbstractLicenseMojo extends AbstractMojo {
         }
 
         throw new MojoFailureException(Messages.license.fileNotFound(filename, dir));
-    }
-
-    private static boolean isMavenProjectFolder(Path dir) {
-        return Files.isRegularFile(dir.resolve("pom.xml")); //$NON-NLS-1$
-    }
-
-    private static boolean isGitRoot(Path dir) {
-        return Files.isDirectory(dir.resolve(".git")); //$NON-NLS-1$
     }
 
     private static void abortIfGitRoot(Path dir) throws MojoFailureException {
