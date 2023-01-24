@@ -74,7 +74,7 @@ public class SiteIndexMojo extends AbstractMojo {
      *
      * 1.0
      */
-    @Parameter(property = "robtimus.site-index.sourceFile", defaultValue = "${project.basedir}/README.md", required = true)
+    @Parameter(defaultValue = "${project.basedir}/README.md", required = true)
     File sourceFile;
 
     /**
@@ -82,7 +82,7 @@ public class SiteIndexMojo extends AbstractMojo {
      *
      * @since 1.0
      */
-    @Parameter(property = "robtimus.site-index.targetFile", defaultValue = "${project.basedir}/src/site/markdown/index.md", required = true)
+    @Parameter(defaultValue = "${project.basedir}/src/site/markdown/index.md", required = true)
     File targetFile;
 
     /**
@@ -90,7 +90,7 @@ public class SiteIndexMojo extends AbstractMojo {
      *
      * @since 1.0
      */
-    @Parameter(property = "robtimus.site-index.title", defaultValue = "Overview", required = true)
+    @Parameter(defaultValue = "Overview", required = true)
     String siteIndexTitle;
 
     /**
@@ -98,7 +98,7 @@ public class SiteIndexMojo extends AbstractMojo {
      *
      * @since 1.0
      */
-    @Parameter(property = "robtimus.site-index.badgePatterns")
+    @Parameter
     String[] badgePatterns;
 
     /**
@@ -106,7 +106,7 @@ public class SiteIndexMojo extends AbstractMojo {
      *
      * @since 1.0
      */
-    @Parameter(property = "robtimus.site-index.encoding", defaultValue = "${project.build.sourceEncoding}")
+    @Parameter(defaultValue = "${project.build.sourceEncoding}")
     String encoding;
 
     /**

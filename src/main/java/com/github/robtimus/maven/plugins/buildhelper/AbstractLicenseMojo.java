@@ -38,7 +38,7 @@ abstract class AbstractLicenseMojo extends AbstractMojo {
      *
      * @since 1.0
      */
-    @Parameter(property = "robtimus.license.filename", defaultValue = "LICENSE.txt", required = true)
+    @Parameter(defaultValue = "LICENSE.txt", required = true)
     String licenseFilename;
 
     /**
@@ -46,7 +46,6 @@ abstract class AbstractLicenseMojo extends AbstractMojo {
      *
      * @since 1.0
      */
-    // No property, allowing it to be overridden is a security risk
     @Parameter(defaultValue = "0", required = true)
     private int maxParentCount;
 
