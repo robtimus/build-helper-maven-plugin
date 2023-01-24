@@ -25,6 +25,25 @@ final class MojoUtils {
     private MojoUtils() {
     }
 
+    static Path getProjectRoot(Path baseDir) {
+        Path dir = baseDir.toAbsolutePath().normalize();
+        if (isGitRoot(dir)) {
+            return dir;
+        }
+        Path parent = dir.getParent();
+        while (parent != null) {
+            if (isGitRoot(parent)) {
+                return parent;
+            }
+            if (!isMavenProjectFolder(parent)) {
+                return dir;
+            }
+            dir = parent;
+            parent = parent.getParent();
+        }
+        return dir;
+    }
+
     static boolean isMavenProjectFolder(Path dir) {
         return Files.isRegularFile(dir.resolve("pom.xml")); //$NON-NLS-1$
     }

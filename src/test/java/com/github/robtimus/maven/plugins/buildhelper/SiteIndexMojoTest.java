@@ -17,7 +17,6 @@
 
 package com.github.robtimus.maven.plugins.buildhelper;
 
-import static com.github.robtimus.maven.plugins.buildhelper.SiteIndexMojo.getProjectRoot;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -43,7 +42,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -337,72 +335,6 @@ class SiteIndexMojoTest {
             verify(log).info(Messages.siteIndex.skipped());
 
             verifyNoMoreInteractions(log);
-        }
-    }
-
-    @Nested
-    @DisplayName("getProjectRoot")
-    class GetProjectRoot {
-
-        private Path baseDir = Paths.get(URI.create("memory:/level1/level2/level3"));
-
-        @BeforeEach
-        void initFileSystem() {
-            MemoryFileSystemProvider.clear();
-
-            assertDoesNotThrow(() -> Files.createDirectories(baseDir));
-        }
-
-        @Test
-        @DisplayName("current dir is Git root")
-        void testCurrentDirIsGitRoot() {
-            assertDoesNotThrow(() -> {
-                for (Path dir = baseDir; dir != null; dir = dir.getParent()) {
-                    Files.createFile(dir.resolve("pom.xml"));
-                }
-                Files.createDirectories(baseDir.resolve(".git"));
-            });
-
-            assertEquals(baseDir, getProjectRoot(baseDir));
-        }
-
-        @Test
-        @DisplayName("parent dir is Git root")
-        void testParentDirIsGitRoot() {
-            assertDoesNotThrow(() -> {
-                for (Path dir = baseDir; dir != null; dir = dir.getParent()) {
-                    Files.createFile(dir.resolve("pom.xml"));
-                }
-                Files.createDirectories(baseDir.resolve("../.git"));
-            });
-
-            assertEquals(baseDir.getParent(), getProjectRoot(baseDir));
-        }
-
-        @Test
-        @DisplayName("only parent contains pom")
-        void testOnlyParentDirContainsPom() {
-            assertDoesNotThrow(() -> Files.createFile(baseDir.resolve("../pom.xml")));
-
-            assertEquals(baseDir.getParent(), getProjectRoot(baseDir));
-        }
-
-        @Test
-        @DisplayName("parent does not contain pom")
-        void testParentDirDoesNotContainPom() {
-            assertEquals(baseDir, getProjectRoot(baseDir));
-        }
-
-        @Test
-        @DisplayName("each folder has pom")
-        void testEachFolderHasPom() {
-            assertDoesNotThrow(() -> {
-                for (Path dir = baseDir; dir != null; dir = dir.getParent()) {
-                    Files.createFile(dir.resolve("pom.xml"));
-                }
-            });
-
-            assertEquals(Paths.get(URI.create("memory:/")), getProjectRoot(baseDir));
         }
     }
 

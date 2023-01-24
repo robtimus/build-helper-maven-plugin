@@ -17,8 +17,7 @@
 
 package com.github.robtimus.maven.plugins.buildhelper;
 
-import static com.github.robtimus.maven.plugins.buildhelper.MojoUtils.isGitRoot;
-import static com.github.robtimus.maven.plugins.buildhelper.MojoUtils.isMavenProjectFolder;
+import static com.github.robtimus.maven.plugins.buildhelper.MojoUtils.getProjectRoot;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -154,25 +153,6 @@ public class SiteIndexMojo extends AbstractMojo {
         }
 
         getLog().info(Messages.siteIndex.generated(sourceFile, targetFile));
-    }
-
-    static Path getProjectRoot(Path baseDir) {
-        Path dir = baseDir.toAbsolutePath().normalize();
-        if (isGitRoot(dir)) {
-            return dir;
-        }
-        Path parent = dir.getParent();
-        while (parent != null) {
-            if (isGitRoot(parent)) {
-                return parent;
-            }
-            if (!isMavenProjectFolder(parent)) {
-                return dir;
-            }
-            dir = parent;
-            parent = parent.getParent();
-        }
-        return dir;
     }
 
     Charset getCharset() {
