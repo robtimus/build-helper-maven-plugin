@@ -29,3 +29,10 @@ Two badges in lists:
 * [![Maven](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin) ![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage) at the start
 * at the end [![Maven](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin) ![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage)
 * [![Maven](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin) combined ![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage)
+
+Some non-matching badges:
+[![Non-matched](https://non-matched)](https://non-matched)
+![Non-matched](https://non-matched)
+
+* Item 1 [![Non-matched](https://non-matched)](https://non-matched)
+* Item 2 ![Non-matched](https://non-matched)

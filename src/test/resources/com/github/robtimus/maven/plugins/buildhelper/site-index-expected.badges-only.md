@@ -23,3 +23,10 @@ Two badges in lists:
 * at the start
 * at the end
 * combined
+
+Some non-matching badges:
+[![Non-matched](https://non-matched)](https://non-matched)
+![Non-matched](https://non-matched)
+
+* Item 1 [![Non-matched](https://non-matched)](https://non-matched)
+* Item 2 ![Non-matched](https://non-matched)

@@ -57,9 +57,12 @@ public class SiteIndexMojo extends AbstractMojo {
     private static final String LINE_START_REGEX = "(?<=^|\n)"; //$NON-NLS-1$
     private static final String TEXT_REGEX = "\\[(?<text>[^\\]]*)\\]"; //$NON-NLS-1$
     private static final String URL_REGEX_PREFIX = "\\((?<url>"; //$NON-NLS-1$
-    private static final String URL_REGEX_QUERY = "(?:\\?[^)]*)?"; //$NON-NLS-1$
+    private static final String URL_REGEX_QUERY = "(?:(?:\\?|&)[^)]*)?"; //$NON-NLS-1$
     private static final String URL_REGEX_POSTFIX = ")\\)"; //$NON-NLS-1$
+    private static final String URL_REGEX = URL_REGEX_PREFIX + "[^)]*" + URL_REGEX_POSTFIX; //$NON-NLS-1$
     private static final String LINK_REGEX = "\\((?<link>[^)]*)\\)"; //$NON-NLS-1$
+    private static final String BADGE_REGEX_WITHOUT_LINK = "!" + TEXT_REGEX + URL_REGEX; //$NON-NLS-1$
+    private static final String BADGE_REGEX_WITH_LINK = "\\[" + BADGE_REGEX_WITHOUT_LINK + "\\]" + LINK_REGEX; //$NON-NLS-1$ //$NON-NLS-2$
 
     private static final String TEXT_GROUP = "text"; //$NON-NLS-1$
     private static final String URL_GROUP = "url"; //$NON-NLS-1$
@@ -212,36 +215,24 @@ public class SiteIndexMojo extends AbstractMojo {
 
     CharSequence removeBadges(CharSequence content) {
         CharSequence result = content;
-        for (String badgePattern : badgePatterns) {
-            result = removeBadges(result, badgePattern);
-        }
-        return result;
-    }
-
-    CharSequence removeBadges(CharSequence content, String badgePattern) {
-        CharSequence result = content;
-        result = removeBadgesInLinesWithLink(result, badgePattern);
-        result = removeBadgesInLinesWithoutLink(result, badgePattern);
-        result = removeBadgeLinesWithLink(result, badgePattern);
-        result = removeBadgeLinesWithoutLink(result, badgePattern);
+        result = removeBadgesInLinesWithLink(result);
+        result = removeBadgesInLinesWithoutLink(result);
+        result = removeBadgeLinesWithLink(result);
+        result = removeBadgeLinesWithoutLink(result);
         return result;
     }
 
     @SuppressWarnings("nls")
-    CharSequence removeBadgesInLinesWithLink(CharSequence content, String badgePattern) {
-        return removeBadgesWithLink(content, badgePattern, " ", "");
+    CharSequence removeBadgesInLinesWithLink(CharSequence content) {
+        return removeBadgesWithLink(content, " " + BADGE_REGEX_WITH_LINK);
     }
 
     @SuppressWarnings("nls")
-    CharSequence removeBadgeLinesWithLink(CharSequence content, String badgePattern) {
-        return removeBadgesWithLink(content, badgePattern, LINE_START_REGEX, "\r?\n");
+    CharSequence removeBadgeLinesWithLink(CharSequence content) {
+        return removeBadgesWithLink(content, LINE_START_REGEX + BADGE_REGEX_WITH_LINK + "\r?\n");
     }
 
-    @SuppressWarnings("nls")
-    private CharSequence removeBadgesWithLink(CharSequence content, String badgePattern, String prefix, String postfix) {
-        String regex = prefix + "\\[!" + TEXT_REGEX + URL_REGEX_PREFIX + badgePattern + URL_REGEX_QUERY + URL_REGEX_POSTFIX + "\\]"
-                + LINK_REGEX + postfix;
-
+    private CharSequence removeBadgesWithLink(CharSequence content, String regex) {
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(content);
 
@@ -252,29 +243,29 @@ public class SiteIndexMojo extends AbstractMojo {
             String url = matcher.group(URL_GROUP);
             String link = matcher.group(LINK_GROUP);
 
-            result.append(content, index, matcher.start());
+            if (isMatchingBadge(url)) {
+                result.append(content, index, matcher.start());
+                getLog().debug(Messages.siteIndex.removedBadgeWithLink(url, text, link));
+            } else {
+                result.append(content, index, matcher.end());
+            }
             index = matcher.end();
-
-            getLog().debug(Messages.siteIndex.removedBadgeWithLink(url, text, link));
         }
         result.append(content, index, content.length());
         return result;
     }
 
     @SuppressWarnings("nls")
-    CharSequence removeBadgesInLinesWithoutLink(CharSequence content, String badgePattern) {
-        return removeBadgesWithoutLink(content, badgePattern, " ", "");
+    CharSequence removeBadgesInLinesWithoutLink(CharSequence content) {
+        return removeBadgesWithoutLink(content, " " + BADGE_REGEX_WITHOUT_LINK);
     }
 
     @SuppressWarnings("nls")
-    CharSequence removeBadgeLinesWithoutLink(CharSequence content, String badgePattern) {
-        return removeBadgesWithoutLink(content, badgePattern, LINE_START_REGEX, "\r?\n");
+    CharSequence removeBadgeLinesWithoutLink(CharSequence content) {
+        return removeBadgesWithoutLink(content, LINE_START_REGEX + BADGE_REGEX_WITHOUT_LINK + "\r?\n");
     }
 
-    @SuppressWarnings("nls")
-    private CharSequence removeBadgesWithoutLink(CharSequence content, String badgePattern, String prefix, String postfix) {
-        String regex = prefix + "!" + TEXT_REGEX + URL_REGEX_PREFIX + badgePattern + URL_REGEX_QUERY + URL_REGEX_POSTFIX + postfix;
-
+    private CharSequence removeBadgesWithoutLink(CharSequence content, String regex) {
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(content);
 
@@ -284,12 +275,30 @@ public class SiteIndexMojo extends AbstractMojo {
             String text = matcher.group(TEXT_GROUP);
             String url = matcher.group(URL_GROUP);
 
-            result.append(content, index, matcher.start());
+            if (isMatchingBadge(url)) {
+                result.append(content, index, matcher.start());
+                getLog().debug(Messages.siteIndex.removedBadgeWithoutLink(url, text));
+            } else {
+                result.append(content, index, matcher.end());
+            }
             index = matcher.end();
-
-            getLog().debug(Messages.siteIndex.removedBadgeWithoutLink(url, text));
         }
         result.append(content, index, content.length());
         return result;
+    }
+
+    private boolean isMatchingBadge(String url) {
+        for (String badgePattern : badgePatterns) {
+            if (isMatchingBadge(url, badgePattern)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @SuppressWarnings("nls")
+    private boolean isMatchingBadge(String url, String badgePattern) {
+        String regex = "^" + badgePattern + URL_REGEX_QUERY;
+        return url.matches(regex);
     }
 }
