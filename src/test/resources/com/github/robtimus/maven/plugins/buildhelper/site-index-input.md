@@ -21,3 +21,11 @@ And some addititional:
 Trailing with target file ![Known Vulnerabilities](https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg?targetFile=pom.xml)
 
 Two links on the same line: [Team](https://robtimus.github.io/build-helper-maven-plugin/team.html), [Licenses](https://robtimus.github.io/build-helper-maven-plugin/licenses.html).
+
+Two badges on the same line: [![Maven](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin) ![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage)
+And with something between [![Maven](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin) and ![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage)
+
+Two badges in lists:
+* [![Maven](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin) ![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage) at the start
+* at the end [![Maven](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin) ![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage)
+* [![Maven](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin) combined ![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage)

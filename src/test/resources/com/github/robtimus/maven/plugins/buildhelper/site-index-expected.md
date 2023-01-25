@@ -19,3 +19,11 @@ And some addititional:
 Trailing with target file
 
 Two links on the same line: [Team](team.html), [Licenses](licenses.html).
+
+Two badges on the same line:
+And with something between and
+
+Two badges in lists:
+* at the start
+* at the end
+* combined

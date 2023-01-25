@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -182,6 +183,14 @@ class SiteIndexMojoTest {
             verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
                     "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg?targetFile=pom.xml",
                     "Known Vulnerabilities"));
+
+            verify(log, times(5)).debug(Messages.siteIndex.removedBadgeWithLink(
+                    "https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin",
+                    "Maven",
+                    "https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin"));
+            verify(log, times(5)).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                    "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
+                    "SonarCloud"));
 
             verify(log).info(Messages.siteIndex.generated(sourceFile, targetFile));
 
@@ -485,6 +494,14 @@ class SiteIndexMojoTest {
         verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
                 "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg?targetFile=pom.xml",
                 "Known Vulnerabilities"));
+
+        verify(log, times(5)).debug(Messages.siteIndex.removedBadgeWithLink(
+                "https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin",
+                "Maven",
+                "https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin"));
+        verify(log, times(5)).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
+                "SonarCloud"));
 
         verifyNoMoreInteractions(log);
     }
