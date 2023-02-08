@@ -66,10 +66,10 @@
     <version.commons-lang>3.12.0</version.commons-lang>
     <version.junit-support>2.1</version.junit-support>
     <version.maven>3.8.2</version.maven>
-    <version.maven-annotations>3.6.4</version.maven-annotations>
+    <version.maven-annotations>3.7.1</version.maven-annotations>
     <version.memory-fs>2.0.2</version.memory-fs>
 
-    <version.plugin.maven>3.6.4</version.plugin.maven>
+    <version.plugin.maven>3.7.1</version.plugin.maven>
   </properties>
 
   <dependencies>
@@ -286,4 +286,22 @@
       </plugin>
     </plugins>
   </reporting>
+
+  <profiles>
+    <profile>
+      <id>maven-3.9</id>
+
+      <properties>
+        <version.maven>3.9.0</version.maven>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>maven-4</id>
+
+      <properties>
+        <version.maven>4.0.0-alpha-4</version.maven>
+      </properties>
+    </profile>
+  </profiles>
 </project>

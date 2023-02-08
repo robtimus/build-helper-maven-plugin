@@ -39,6 +39,23 @@ jobs:
       - name: Build with Maven
         run: mvn package --file pom.xml -B --no-transfer-progress
 
+  maven-versions:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        maven: [3.9, 4]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Build with Maven
+        run: mvn package --file pom.xml -B --no-transfer-progress -Pmaven-${{matrix.maven}}
+
   site:
     runs-on: ubuntu-latest
     steps:
