@@ -192,7 +192,7 @@ class SiteIndexMojoTest {
                     "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
                     "SonarCloud"));
 
-            verify(log).info(Messages.siteIndex.generated(sourceFile, targetFile));
+            verify(log).info(Messages.siteIndex.generated(targetFile, sourceFile));
 
             verifyNoMoreInteractions(log, mojo.project);
         }

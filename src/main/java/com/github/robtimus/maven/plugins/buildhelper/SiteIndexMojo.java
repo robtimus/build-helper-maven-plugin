@@ -155,7 +155,7 @@ public class SiteIndexMojo extends AbstractMojo {
             throw new MojoExecutionException(e.getMessage(), e);
         }
 
-        getLog().info(Messages.siteIndex.generated(sourceFile, targetFile));
+        getLog().info(Messages.siteIndex.generated(targetFile, sourceFile));
     }
 
     Charset getCharset() {
