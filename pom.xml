@@ -64,10 +64,10 @@
   <properties>
     <version.commons-io>2.11.0</version.commons-io>
     <version.commons-lang>3.12.0</version.commons-lang>
-    <version.junit-support>2.1</version.junit-support>
+    <version.junit-support>2.2</version.junit-support>
     <version.maven>3.8.2</version.maven>
     <version.maven-annotations>3.7.1</version.maven-annotations>
-    <version.memory-fs>2.0.2</version.memory-fs>
+    <version.memory-fs>2.1</version.memory-fs>
 
     <version.plugin.maven>3.7.1</version.plugin.maven>
   </properties>
@@ -199,6 +199,9 @@
             <goals>
               <goal>helpmojo</goal>
             </goals>
+            <configuration>
+              <helpPackageName>com.github.robtimus.maven.plugins.buildhelper</helpPackageName>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -281,7 +284,7 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-plugin-plugin</artifactId>
+        <artifactId>maven-plugin-report-plugin</artifactId>
         <version>${version.plugin.maven}</version>
       </plugin>
     </plugins>
