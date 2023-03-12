@@ -66,10 +66,10 @@
     <version.commons-lang>3.12.0</version.commons-lang>
     <version.junit-support>2.2</version.junit-support>
     <version.maven>3.8.2</version.maven>
-    <version.maven-annotations>3.7.1</version.maven-annotations>
+    <version.maven-annotations>3.8.1</version.maven-annotations>
     <version.memory-fs>2.1</version.memory-fs>
 
-    <version.plugin.maven>3.7.1</version.plugin.maven>
+    <version.plugin.maven>3.8.1</version.plugin.maven>
   </properties>
 
   <dependencies>
