@@ -22,7 +22,7 @@
   <parent>
     <groupId>com.github.robtimus</groupId>
     <artifactId>robtimus-parent</artifactId>
-    <version>1.10</version>
+    <version>1.12</version>
     <relativePath />
   </parent>
 
@@ -62,8 +62,8 @@
   </issueManagement>
 
   <properties>
-    <version.commons-io>2.11.0</version.commons-io>
-    <version.commons-lang>3.12.0</version.commons-lang>
+    <version.commons-io>2.17.0</version.commons-io>
+    <version.commons-lang>3.17.0</version.commons-lang>
     <version.junit-support>2.2</version.junit-support>
     <version.maven>3.8.2</version.maven>
     <version.maven-annotations>3.8.1</version.maven-annotations>
