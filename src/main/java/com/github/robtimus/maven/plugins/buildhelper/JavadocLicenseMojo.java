@@ -49,7 +49,7 @@ public class JavadocLicenseMojo extends AbstractLicenseMojo {
     }
 
     void copyLicenseFile(Path licenseFile, Path buildDir) throws MojoExecutionException {
-        Path targetDir = buildDir.resolve("apidocs/META-INF"); //$NON-NLS-1$
+        Path targetDir = buildDir.resolve("reports/apidocs/META-INF"); //$NON-NLS-1$
         Path targetFile = targetDir.resolve(licenseFile.getFileName());
 
         try {

@@ -76,7 +76,7 @@ class JavadocLicenseMojoTest {
 
         private Path licenseFile = Paths.get(URI.create("memory:/project/LICENSE.txt"));
         private Path buildDir = Paths.get(URI.create("memory:/project/target"));
-        private Path targetFile = buildDir.resolve("apidocs/META-INF/LICENSE.txt");
+        private Path targetFile = buildDir.resolve("reports/apidocs/META-INF/LICENSE.txt");
 
         @BeforeEach
         void initFileSystem() {
