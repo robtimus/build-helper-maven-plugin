@@ -22,12 +22,12 @@
   <parent>
     <groupId>com.github.robtimus</groupId>
     <artifactId>robtimus-parent</artifactId>
-    <version>1.18</version>
+    <version>2.0</version>
     <relativePath />
   </parent>
 
   <artifactId>build-helper-maven-plugin</artifactId>
-  <version>1.3-SNAPSHOT</version>
+  <version>2.0-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
   <name>build-helper-maven-plugin</name>
@@ -62,14 +62,16 @@
   </issueManagement>
 
   <properties>
-    <version.commons-io>2.17.0</version.commons-io>
-    <version.commons-lang>3.17.0</version.commons-lang>
-    <version.junit-support>2.2</version.junit-support>
-    <version.maven>3.8.2</version.maven>
-    <version.maven-annotations>3.8.1</version.maven-annotations>
+    <version.java>11</version.java>
+
+    <version.commons-io>2.20.0</version.commons-io>
+    <version.commons-lang>3.18.0</version.commons-lang>
+    <version.junit-support>3.1</version.junit-support>
+    <version.maven>3.9.5</version.maven>
+    <version.maven-annotations>3.9.0</version.maven-annotations>
     <version.memory-fs>2.1</version.memory-fs>
 
-    <version.plugin.maven>3.8.1</version.plugin.maven>
+    <version.plugin.maven>3.9.0</version.plugin.maven>
   </properties>
 
   <dependencies>
@@ -161,6 +163,13 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>properties</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
 
       <plugin>
@@ -240,6 +249,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>
+            @{argLine}
+            -javaagent:${org.mockito:mockito-core:jar}
+          </argLine>
+        </configuration>
       </plugin>
 
       <plugin>
@@ -290,14 +305,6 @@
   </reporting>
 
   <profiles>
-    <profile>
-      <id>maven-3.9</id>
-
-      <properties>
-        <version.maven>3.9.0</version.maven>
-      </properties>
-    </profile>
-
     <profile>
       <id>maven-4</id>
 
