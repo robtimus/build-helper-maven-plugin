@@ -71,7 +71,7 @@
     <version.maven-annotations>3.9.0</version.maven-annotations>
     <version.memory-fs>2.1</version.memory-fs>
 
-    <version.plugin.maven>3.9.0</version.plugin.maven>
+    <version.plugin.maven>3.15.1</version.plugin.maven>
   </properties>
 
   <dependencies>
