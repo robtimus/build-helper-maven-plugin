@@ -21,6 +21,7 @@ import static com.github.robtimus.maven.plugins.buildhelper.MojoUtils.getProject
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.io.StringReader;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -36,6 +37,13 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.commonmark.node.AbstractVisitor;
+import org.commonmark.node.Image;
+import org.commonmark.node.Link;
+import org.commonmark.node.LinkReferenceDefinition;
+import org.commonmark.node.Node;
+import org.commonmark.parser.IncludeSourceSpans;
+import org.commonmark.parser.Parser;
 
 /**
  * Generate a Markdown site index based on another Markdown file. This goal will provide the following transformations:
@@ -146,7 +154,7 @@ public class SiteIndexMojo extends AbstractMojo {
 
             writeHeader(output);
 
-            CharSequence content = IOUtils.toString(input);
+            String content = IOUtils.toString(input);
             content = removeProjectUrl(content, project.getUrl());
             content = removeBadges(content);
             output.append(content);
@@ -183,43 +191,101 @@ public class SiteIndexMojo extends AbstractMojo {
         output.append('\n');
     }
 
-    @SuppressWarnings("nls")
-    CharSequence removeProjectUrl(CharSequence content, String projectUrl) {
+    String removeProjectUrl(String content, String projectUrl) throws IOException {
         if (StringUtils.isBlank(projectUrl)) {
             return content;
         }
 
-        final String relativeGroup = "relative";
-        String regex = TEXT_REGEX + URL_REGEX_PREFIX + Pattern.quote(projectUrl) + "(?<relative>[^)]*)" + URL_REGEX_POSTFIX;
-
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(content);
-
         StringBuilder result = new StringBuilder(content.length());
-        int index = 0;
-        while (matcher.find()) {
-            String url = matcher.group(URL_GROUP);
-            String relative = matcher.group("relative");
-            int end = matcher.end();
 
-            result.append(content, index, matcher.start(URL_GROUP));
-            result.append(content, matcher.start(relativeGroup), end);
+        Parser parser = Parser.builder()
+                .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
+                .build();
 
-            index = end;
+        try (StringReader reader = new StringReader(content)) {
+            class Visitor extends AbstractVisitor {
 
-            getLog().debug(Messages.siteIndex.removedProjectUrl(url, relative));
+                private int index = 0;
+
+                @Override
+                public void visit(LinkReferenceDefinition linkReferenceDefinition) {
+                    super.visit(linkReferenceDefinition);
+
+                    String url = linkReferenceDefinition.getDestination();
+                    if (url.startsWith(projectUrl)) {
+                        int endOfNode = getEndOfNode(linkReferenceDefinition);
+                        int startOfUrl = content.lastIndexOf(projectUrl, endOfNode);
+                        result.append(content, index, startOfUrl);
+                        index = startOfUrl + projectUrl.length();
+                    }
+                }
+
+                @Override
+                public void visit(Link link) {
+                    super.visit(link);
+                    processLink(link, link.getDestination());
+                }
+
+                @Override
+                public void visit(Image image) {
+                    super.visit(image);
+                    processLink(image, image.getDestination());
+                }
+
+                // If HTML links need to be processed, override visit(HtmlBlock htmlBlock) and/or visit(HtmlInline htmlInline) as well
+
+                private void processLink(Node node, String url) {
+                    if (url.startsWith(projectUrl)) {
+                        appendUntilUrl(node);
+
+                        getLog().debug(Messages.siteIndex.removedProjectUrl(url, url.substring(projectUrl.length())));
+                    }
+                }
+
+                private void appendUntilUrl(Node node) {
+                    int endOfNode = getEndOfNode(node);
+                    int startOfUrl = getStartOfUrl(node);
+                    if (startOfUrl < endOfNode) {
+                        result.append(content, index, startOfUrl);
+                        index = startOfUrl + projectUrl.length();
+                    }
+                    // else the URL itself is not part of the node, most likely because the node is a link reference
+                }
+
+                private int getStartOfUrl(Node node) {
+                    Node lastChild = node.getLastChild();
+                    int endOfLastChild = getEndOfNode(lastChild);
+                    return content.indexOf(projectUrl, endOfLastChild);
+                }
+
+                private int getEndOfNode(Node node) {
+                    return node
+                            .getSourceSpans()
+                            .stream()
+                            .mapToInt(span -> span.getInputIndex() + span.getLength())
+                            .max()
+                            .orElseThrow();
+                }
+            }
+
+            Node node = parser.parseReader(reader);
+
+            Visitor visitor = new Visitor();
+            node.accept(visitor);
+
+            result.append(content, visitor.index, content.length());
+
+            return result.toString();
         }
-        result.append(content, index, content.length());
-        return result;
     }
 
-    CharSequence removeBadges(CharSequence content) {
+    String removeBadges(String content) {
         CharSequence result = content;
         result = removeBadgesInLinesWithLink(result);
         result = removeBadgesInLinesWithoutLink(result);
         result = removeBadgeLinesWithLink(result);
         result = removeBadgeLinesWithoutLink(result);
-        return result;
+        return result.toString();
     }
 
     @SuppressWarnings("nls")

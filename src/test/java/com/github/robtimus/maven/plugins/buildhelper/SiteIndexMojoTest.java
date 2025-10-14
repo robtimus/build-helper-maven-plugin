@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -387,11 +388,16 @@ class SiteIndexMojoTest {
     class RemoveProjectUrl {
 
         private String projectUrl = "https://robtimus.github.io/build-helper-maven-plugin/";
-        private String content = "A plugin that contains several utility [goals](" + projectUrl + "plugin-info.html).";
+        private String content = "A plugin that contains several utility [goals](" + projectUrl + "plugin-info.html).\r\n"
+                + "It also contains a [link to a Javadoc method](" + projectUrl + "apidocs/mymodule/mypackage/MyClass#myMethod\\(int,int\\)),\r\n"
+                + "an ![image](" + projectUrl + "image.png),\r\n"
+                + "and a [link reference].\r\n"
+                + "\r\n"
+                + "[link reference]: " + projectUrl + "link.html";
 
         @Test
         @DisplayName("blank projectUrl")
-        void testBlankProjectUrl() {
+        void testBlankProjectUrl() throws IOException {
             SiteIndexMojo mojo = new SiteIndexMojo();
             Log log = mock(Log.class);
             mojo.setLog(log);
@@ -405,26 +411,30 @@ class SiteIndexMojoTest {
 
         @Test
         @DisplayName("matching projectUrl")
-        void testMatchingProjectUrl() {
+        void testMatchingProjectUrl() throws IOException {
             SiteIndexMojo mojo = new SiteIndexMojo();
             Log log = mock(Log.class);
             mojo.setLog(log);
 
             String expected = content.replace(projectUrl, "");
-            assertEquals(expected, mojo.removeProjectUrl(content, projectUrl).toString());
+            assertEquals(expected, mojo.removeProjectUrl(content, projectUrl));
 
             verify(log).debug(Messages.siteIndex.removedProjectUrl(projectUrl + "plugin-info.html", "plugin-info.html"));
+            verify(log).debug(Messages.siteIndex.removedProjectUrl(projectUrl + "apidocs/mymodule/mypackage/MyClass#myMethod(int,int)",
+                    "apidocs/mymodule/mypackage/MyClass#myMethod(int,int)"));
+            verify(log).debug(Messages.siteIndex.removedProjectUrl(projectUrl + "image.png", "image.png"));
+            verify(log).debug(Messages.siteIndex.removedProjectUrl(projectUrl + "link.html", "link.html"));
             verifyNoMoreInteractions(log);
         }
 
         @Test
         @DisplayName("non-matching projectUrl")
-        void testNonMatchingProjectUrl() {
+        void testNonMatchingProjectUrl() throws IOException {
             SiteIndexMojo mojo = new SiteIndexMojo();
             Log log = mock(Log.class);
             mojo.setLog(log);
 
-            assertEquals(content, mojo.removeProjectUrl(content, "https://robtimus.github.io/other/").toString());
+            assertEquals(content, mojo.removeProjectUrl(content, "https://robtimus.github.io/other/"));
 
             verifyNoInteractions(log);
         }
@@ -445,7 +455,7 @@ class SiteIndexMojoTest {
                 "https://sonarcloud.io/api/project_badges/.*",
         };
 
-        assertEquals(expected, mojo.removeBadges(input).toString());
+        assertEquals(expected, mojo.removeBadges(input));
 
         // Header
         verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
