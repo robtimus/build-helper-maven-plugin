@@ -26,8 +26,6 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
@@ -42,6 +40,8 @@ import org.commonmark.node.Image;
 import org.commonmark.node.Link;
 import org.commonmark.node.LinkReferenceDefinition;
 import org.commonmark.node.Node;
+import org.commonmark.node.SourceSpan;
+import org.commonmark.node.Text;
 import org.commonmark.parser.IncludeSourceSpans;
 import org.commonmark.parser.Parser;
 
@@ -62,19 +62,11 @@ import org.commonmark.parser.Parser;
 @Mojo(name = "site-index", defaultPhase = LifecyclePhase.PRE_SITE, requiresProject = true, threadSafe = true)
 public class SiteIndexMojo extends AbstractMojo {
 
-    private static final String LINE_START_REGEX = "(?<=^|\n)"; //$NON-NLS-1$
-    private static final String TEXT_REGEX = "\\[(?<text>[^\\]]*)\\]"; //$NON-NLS-1$
-    private static final String URL_REGEX_PREFIX = "\\((?<url>"; //$NON-NLS-1$
-    private static final String URL_REGEX_QUERY = "(?:(?:\\?|&)[^)]*)?"; //$NON-NLS-1$
-    private static final String URL_REGEX_POSTFIX = ")\\)"; //$NON-NLS-1$
-    private static final String URL_REGEX = URL_REGEX_PREFIX + "[^)]*" + URL_REGEX_POSTFIX; //$NON-NLS-1$
-    private static final String LINK_REGEX = "\\((?<link>[^)]*)\\)"; //$NON-NLS-1$
-    private static final String BADGE_REGEX_WITHOUT_LINK = "!" + TEXT_REGEX + URL_REGEX; //$NON-NLS-1$
-    private static final String BADGE_REGEX_WITH_LINK = "\\[" + BADGE_REGEX_WITHOUT_LINK + "\\]" + LINK_REGEX; //$NON-NLS-1$ //$NON-NLS-2$
+    private static final String URL_REGEX_QUERY = "(?:(?:\\?|&).*)?"; //$NON-NLS-1$
 
-    private static final String TEXT_GROUP = "text"; //$NON-NLS-1$
-    private static final String URL_GROUP = "url"; //$NON-NLS-1$
-    private static final String LINK_GROUP = "link"; //$NON-NLS-1$
+    private static final Parser MARKDOWN_PARSER = Parser.builder()
+            .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
+            .build();
 
     @Parameter(defaultValue = "${project}", readonly = true)
     MavenProject project;
@@ -196,175 +188,258 @@ public class SiteIndexMojo extends AbstractMojo {
             return content;
         }
 
-        StringBuilder result = new StringBuilder(content.length());
-
-        Parser parser = Parser.builder()
-                .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
-                .build();
-
         try (StringReader reader = new StringReader(content)) {
-            class Visitor extends AbstractVisitor {
+            Node node = MARKDOWN_PARSER.parseReader(reader);
 
-                private int index = 0;
-
-                @Override
-                public void visit(LinkReferenceDefinition linkReferenceDefinition) {
-                    super.visit(linkReferenceDefinition);
-
-                    String url = linkReferenceDefinition.getDestination();
-                    if (url.startsWith(projectUrl)) {
-                        int endOfNode = getEndOfNode(linkReferenceDefinition);
-                        int startOfUrl = content.lastIndexOf(projectUrl, endOfNode);
-                        result.append(content, index, startOfUrl);
-                        index = startOfUrl + projectUrl.length();
-                    }
-                }
-
-                @Override
-                public void visit(Link link) {
-                    super.visit(link);
-                    processLink(link, link.getDestination());
-                }
-
-                @Override
-                public void visit(Image image) {
-                    super.visit(image);
-                    processLink(image, image.getDestination());
-                }
-
-                // If HTML links need to be processed, override visit(HtmlBlock htmlBlock) and/or visit(HtmlInline htmlInline) as well
-
-                private void processLink(Node node, String url) {
-                    if (url.startsWith(projectUrl)) {
-                        appendUntilUrl(node);
-
-                        getLog().debug(Messages.siteIndex.removedProjectUrl(url, url.substring(projectUrl.length())));
-                    }
-                }
-
-                private void appendUntilUrl(Node node) {
-                    int endOfNode = getEndOfNode(node);
-                    int startOfUrl = getStartOfUrl(node);
-                    if (startOfUrl < endOfNode) {
-                        result.append(content, index, startOfUrl);
-                        index = startOfUrl + projectUrl.length();
-                    }
-                    // else the URL itself is not part of the node, most likely because the node is a link reference
-                }
-
-                private int getStartOfUrl(Node node) {
-                    Node lastChild = node.getLastChild();
-                    int endOfLastChild = getEndOfNode(lastChild);
-                    return content.indexOf(projectUrl, endOfLastChild);
-                }
-
-                private int getEndOfNode(Node node) {
-                    return node
-                            .getSourceSpans()
-                            .stream()
-                            .mapToInt(span -> span.getInputIndex() + span.getLength())
-                            .max()
-                            .orElseThrow();
-                }
-            }
-
-            Node node = parser.parseReader(reader);
-
-            Visitor visitor = new Visitor();
+            RemoveProjectUrlVisitor visitor = new RemoveProjectUrlVisitor(content, projectUrl);
             node.accept(visitor);
-
-            result.append(content, visitor.index, content.length());
-
-            return result.toString();
+            visitor.appendTail();
+            return visitor.result.toString();
         }
     }
 
-    String removeBadges(String content) {
-        CharSequence result = content;
-        result = removeBadgesInLinesWithLink(result);
-        result = removeBadgesInLinesWithoutLink(result);
-        result = removeBadgeLinesWithLink(result);
-        result = removeBadgeLinesWithoutLink(result);
-        return result.toString();
+    private final class RemoveProjectUrlVisitor extends AbstractVisitor {
+
+        private final String content;
+        private final String projectUrl;
+        private final StringBuilder result;
+
+        private int index;
+
+        private RemoveProjectUrlVisitor(String content, String projectUrl) {
+            this.content = content;
+            this.projectUrl = projectUrl;
+            this.result = new StringBuilder(content.length());
+
+            this.index = 0;
+        }
+
+        @Override
+        public void visit(LinkReferenceDefinition linkReferenceDefinition) {
+            super.visit(linkReferenceDefinition);
+
+            String url = linkReferenceDefinition.getDestination();
+            if (url.startsWith(projectUrl)) {
+                int endOfNode = getEndOfNode(linkReferenceDefinition);
+                int startOfUrl = content.lastIndexOf(projectUrl, endOfNode);
+                result.append(content, index, startOfUrl);
+                index = startOfUrl + projectUrl.length();
+            }
+        }
+
+        @Override
+        public void visit(Link link) {
+            super.visit(link);
+            processLink(link, link.getDestination());
+        }
+
+        @Override
+        public void visit(Image image) {
+            super.visit(image);
+            processLink(image, image.getDestination());
+        }
+
+        // If HTML links need to be processed, override visit(HtmlBlock htmlBlock) and/or visit(HtmlInline htmlInline) as well
+
+        private void processLink(Node node, String url) {
+            if (url.startsWith(projectUrl)) {
+                appendUntilUrl(node);
+
+                getLog().debug(Messages.siteIndex.removedProjectUrl(url, url.substring(projectUrl.length())));
+            }
+        }
+
+        private void appendUntilUrl(Node node) {
+            int endOfNode = getEndOfNode(node);
+            int startOfUrl = getStartOfUrl(node);
+            if (startOfUrl < endOfNode) {
+                result.append(content, index, startOfUrl);
+                index = startOfUrl + projectUrl.length();
+            }
+            // else the URL itself is not part of the node, most likely because the node is a link reference
+        }
+
+        private int getStartOfUrl(Node node) {
+            Node lastChild = node.getLastChild();
+            int endOfLastChild = getEndOfNode(lastChild);
+            return content.indexOf(projectUrl, endOfLastChild);
+        }
+
+        private int getEndOfNode(Node node) {
+            return node
+                    .getSourceSpans()
+                    .stream()
+                    .mapToInt(span -> span.getInputIndex() + span.getLength())
+                    .max()
+                    .orElseThrow();
+        }
+
+        private void appendTail() {
+            result.append(content, index, content.length());
+            index = content.length();
+        }
     }
 
-    @SuppressWarnings("nls")
-    CharSequence removeBadgesInLinesWithLink(CharSequence content) {
-        return removeBadgesWithLink(content, " " + BADGE_REGEX_WITH_LINK);
+    String removeBadges(String content) throws IOException {
+        try (StringReader reader = new StringReader(content)) {
+            Node node = MARKDOWN_PARSER.parseReader(reader);
+
+            RemoveBadgesVisitor visitor = new RemoveBadgesVisitor(content);
+            node.accept(visitor);
+            visitor.appendTail();
+            return visitor.result.toString();
+        }
     }
 
-    @SuppressWarnings("nls")
-    CharSequence removeBadgeLinesWithLink(CharSequence content) {
-        return removeBadgesWithLink(content, LINE_START_REGEX + BADGE_REGEX_WITH_LINK + "\r?\n");
-    }
+    private final class RemoveBadgesVisitor extends AbstractVisitor {
 
-    private CharSequence removeBadgesWithLink(CharSequence content, String regex) {
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(content);
+        private final String content;
+        private final StringBuilder result;
 
-        StringBuilder result = new StringBuilder(content.length());
-        int index = 0;
-        while (matcher.find()) {
-            String text = matcher.group(TEXT_GROUP);
-            String url = matcher.group(URL_GROUP);
-            String link = matcher.group(LINK_GROUP);
+        private int index;
 
-            if (isMatchingBadge(url)) {
-                result.append(content, index, matcher.start());
-                getLog().debug(Messages.siteIndex.removedBadgeWithLink(url, text, link));
+        private RemoveBadgesVisitor(String content) {
+            this.content = content;
+            this.result = new StringBuilder(content.length());
+
+            this.index = 0;
+        }
+
+        @Override
+        public void visit(Image image) {
+            if (isBadgeImage(image)) {
+                skipBadge(image);
+
+                String text = extractText(image);
+                getLog().debug(Messages.siteIndex.removedBadgeWithoutLink(image.getDestination(), text));
             } else {
-                result.append(content, index, matcher.end());
+                super.visit(image);
             }
-            index = matcher.end();
         }
-        result.append(content, index, content.length());
-        return result;
-    }
 
-    @SuppressWarnings("nls")
-    CharSequence removeBadgesInLinesWithoutLink(CharSequence content) {
-        return removeBadgesWithoutLink(content, " " + BADGE_REGEX_WITHOUT_LINK);
-    }
+        @Override
+        public void visit(Link link) {
+            Image badgeImage = getSingleBadgeImageChild(link);
+            if (badgeImage != null) {
+                skipBadge(link);
 
-    @SuppressWarnings("nls")
-    CharSequence removeBadgeLinesWithoutLink(CharSequence content) {
-        return removeBadgesWithoutLink(content, LINE_START_REGEX + BADGE_REGEX_WITHOUT_LINK + "\r?\n");
-    }
-
-    private CharSequence removeBadgesWithoutLink(CharSequence content, String regex) {
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(content);
-
-        StringBuilder result = new StringBuilder(content.length());
-        int index = 0;
-        while (matcher.find()) {
-            String text = matcher.group(TEXT_GROUP);
-            String url = matcher.group(URL_GROUP);
-
-            if (isMatchingBadge(url)) {
-                result.append(content, index, matcher.start());
-                getLog().debug(Messages.siteIndex.removedBadgeWithoutLink(url, text));
+                String text = extractText(link);
+                getLog().debug(Messages.siteIndex.removedBadgeWithLink(badgeImage.getDestination(), text, link.getDestination()));
             } else {
-                result.append(content, index, matcher.end());
-            }
-            index = matcher.end();
-        }
-        result.append(content, index, content.length());
-        return result;
-    }
-
-    private boolean isMatchingBadge(String url) {
-        for (String badgePattern : badgePatterns) {
-            if (isMatchingBadge(url, badgePattern)) {
-                return true;
+                super.visit(link);
             }
         }
-        return false;
+
+        private boolean isBadgeImage(Image image) {
+            return isMatchingBadge(image.getDestination());
+        }
+
+        private boolean isMatchingBadge(String url) {
+            for (String badgePattern : badgePatterns) {
+                if (isMatchingBadge(url, badgePattern)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @SuppressWarnings("nls")
+        private boolean isMatchingBadge(String url, String badgePattern) {
+            String regex = "^" + badgePattern + URL_REGEX_QUERY;
+            return url.matches(regex);
+        }
+
+        private Image getSingleBadgeImageChild(Link link) {
+            Node firstChild = link.getFirstChild();
+            Node lastChild = link.getLastChild();
+            if (firstChild == lastChild && firstChild instanceof Image) {
+                Image image = (Image) firstChild;
+                return isBadgeImage(image) ? image : null;
+            }
+            return null;
+        }
+
+        private void skipBadge(Node node) {
+            int startOfNode = getStartOfNode(node);
+            int endOfNode = getEndOfNode(node);
+            if (isSingleLine(startOfNode, endOfNode)) {
+                skipBadgeLine(startOfNode, endOfNode);
+            } else {
+                skipBadge(startOfNode, endOfNode);
+            }
+        }
+
+        private void skipBadgeLine(int startOfNode, int endOfNode) {
+            result.append(content, index, startOfNode);
+            index = endOfNode;
+            if (index < content.length() && content.charAt(index) == '\r') {
+                index++;
+            }
+            if (index < content.length() && content.charAt(index) == '\n') {
+                index++;
+            }
+        }
+
+        private void skipBadge(int startOfNode, int endOfNode) {
+            int start = startOfNode > 0 && content.charAt(startOfNode - 1) == ' ' ? startOfNode - 1 : startOfNode;
+            result.append(content, index, start);
+            index = endOfNode;
+        }
+
+        private int getStartOfNode(Node node) {
+            return node
+                    .getSourceSpans()
+                    .stream()
+                    .mapToInt(SourceSpan::getInputIndex)
+                    .max()
+                    .orElseThrow();
+        }
+
+        private int getEndOfNode(Node node) {
+            return node
+                    .getSourceSpans()
+                    .stream()
+                    .mapToInt(span -> span.getInputIndex() + span.getLength())
+                    .max()
+                    .orElseThrow();
+        }
+
+        private boolean isSingleLine(int startOfNode, int endOfNode) {
+            return isStartOfLine(startOfNode) && isEndOfLine(endOfNode);
+        }
+
+        private boolean isStartOfLine(int startOfNode) {
+            return startOfNode == 0 || isLineBreakChar(content.charAt(startOfNode - 1));
+        }
+
+        private boolean isEndOfLine(int endOfNode) {
+            return endOfNode == content.length() || isLineBreakChar(content.charAt(endOfNode));
+        }
+
+        private boolean isLineBreakChar(char c) {
+            return c == '\r' || c == '\n';
+        }
+
+        private String extractText(Node node) {
+            TextOnlyVisitor visitor = new TextOnlyVisitor();
+            node.accept(visitor);
+            return visitor.content.toString();
+        }
+
+        private void appendTail() {
+            result.append(content, index, content.length());
+            index = content.length();
+        }
     }
 
-    @SuppressWarnings("nls")
-    private boolean isMatchingBadge(String url, String badgePattern) {
-        String regex = "^" + badgePattern + URL_REGEX_QUERY;
-        return url.matches(regex);
+    private static final class TextOnlyVisitor extends AbstractVisitor {
+
+        private final StringBuilder content = new StringBuilder();
+
+        @Override
+        public void visit(Text text) {
+            super.visit(text);
+            content.append(text.getLiteral());
+        }
     }
 }

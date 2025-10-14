@@ -44,6 +44,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -440,79 +441,163 @@ class SiteIndexMojoTest {
         }
     }
 
-    @Test
+    @Nested
     @DisplayName("removeBadges")
-    void testRemoveBadges(@TestResource("site-index-input.md") @EOL(EOL.LF) @Encoding("UTF-8") String input,
-            @TestResource("site-index-expected.badges-only.md") @EOL(EOL.LF) @Encoding("UTF-8") String expected) {
+    class RemoveBadges {
 
-        SiteIndexMojo mojo = new SiteIndexMojo();
-        Log log = mock(Log.class);
-        mojo.setLog(log);
-        mojo.badgePatterns = new String[] {
-                "https://github.com/.*/badge.svg",
-                "https://img.shields.io/.*?",
-                "https://snyk.io/test/.*/badge.svg",
-                "https://sonarcloud.io/api/project_badges/.*",
-        };
+        private SiteIndexMojo mojo;
+        private Log log;
 
-        assertEquals(expected, mojo.removeBadges(input));
+        @BeforeEach
+        void setupMojo() {
+            mojo = new SiteIndexMojo();
+            log = mock(Log.class);
+            mojo.setLog(log);
+            mojo.badgePatterns = new String[] {
+                    "https://github.com/.*/badge.svg",
+                    "https://img.shields.io/.*?",
+                    "https://snyk.io/test/.*/badge.svg",
+                    "https://sonarcloud.io/api/project_badges/.*",
+            };
+        }
 
-        // Header
-        verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
-                "https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin",
-                "Maven Central",
-                "https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
-                "https://github.com/robtimus/build-helper-maven-plugin/actions/workflows/build.yml/badge.svg",
-                "Build Status",
-                "https://github.com/robtimus/build-helper-maven-plugin/actions/workflows/build.yml"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
-                "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg",
-                "Known Vulnerabilities",
-                "https://snyk.io/test/github/robtimus/build-helper-maven-plugin"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
-                "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=alert_status",
-                "Quality Gate Status"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
-                "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
-                "Coverage"));
+        @Test
+        @DisplayName("full site index with Unix line breaks")
+        void testFullSiteIndexWithUnixLineBreaks(
+                @TestResource("site-index-input.md") @EOL(EOL.LF) @Encoding("UTF-8") String input,
+                @TestResource("site-index-expected.badges-only.md") @EOL(EOL.LF) @Encoding("UTF-8") String expected) throws IOException {
 
-        // Badges in lists
-        verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
-                "https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin",
-                "Maven Central"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
-                "https://github.com/robtimus/build-helper-maven-plugin/actions/workflows/build.yml/badge.svg",
-                "Build Status"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
-                "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg",
-                "Known Vulnerabilities"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
-                "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=alert_status",
-                "Quality Gate Status",
-                "https://sonarcloud.io/summary/overall?id=com.github.robtimus%3Abuild-helper-maven-plugin"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
-                "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
-                "Coverage",
-                "https://sonarcloud.io/summary/overall?id=com.github.robtimus%3Abuild-helper-maven-plugin"));
+            testFullSiteIndex(input, expected);
+        }
 
-        // Additional
-        verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
-                "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg?targetFile=pom.xml",
-                "Known Vulnerabilities",
-                "https://snyk.io/test/github/robtimus/build-helper-maven-plugin?targetFile=pom.xml"));
-        verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
-                "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg?targetFile=pom.xml",
-                "Known Vulnerabilities"));
+        @Test
+        @DisplayName("full site index with Windows line breaks")
+        void testFullSiteIndexWithWindowsLineBreaks(
+                @TestResource("site-index-input.md") @EOL(EOL.CRLF) @Encoding("UTF-8") String input,
+                @TestResource("site-index-expected.badges-only.md") @EOL(EOL.CRLF) @Encoding("UTF-8") String expected) throws IOException {
 
-        verify(log, times(5)).debug(Messages.siteIndex.removedBadgeWithLink(
-                "https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin",
-                "Maven",
-                "https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin"));
-        verify(log, times(5)).debug(Messages.siteIndex.removedBadgeWithoutLink(
-                "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
-                "SonarCloud"));
+            testFullSiteIndex(input, expected);
+        }
 
-        verifyNoMoreInteractions(log);
+        @Test
+        @DisplayName("full site index with carriage return breaks")
+        void testFullSiteIndexWithCarriageReturnLineBreaks(
+                @TestResource("site-index-input.md") @EOL(EOL.CR) @Encoding("UTF-8") String input,
+                @TestResource("site-index-expected.badges-only.md") @EOL(EOL.CR) @Encoding("UTF-8") String expected) throws IOException {
+
+            testFullSiteIndex(input, expected);
+        }
+
+        private void testFullSiteIndex(String input, String expected) throws IOException {
+            assertEquals(expected, mojo.removeBadges(input));
+
+            // Header
+            verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
+                    "https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin",
+                    "Maven Central",
+                    "https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
+                    "https://github.com/robtimus/build-helper-maven-plugin/actions/workflows/build.yml/badge.svg",
+                    "Build Status",
+                    "https://github.com/robtimus/build-helper-maven-plugin/actions/workflows/build.yml"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
+                    "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg",
+                    "Known Vulnerabilities",
+                    "https://snyk.io/test/github/robtimus/build-helper-maven-plugin"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                    "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=alert_status",
+                    "Quality Gate Status"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                    "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
+                    "Coverage"));
+
+            // Badges in lists
+            verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                    "https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin",
+                    "Maven Central"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                    "https://github.com/robtimus/build-helper-maven-plugin/actions/workflows/build.yml/badge.svg",
+                    "Build Status"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                    "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg",
+                    "Known Vulnerabilities"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
+                    "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=alert_status",
+                    "Quality Gate Status",
+                    "https://sonarcloud.io/summary/overall?id=com.github.robtimus%3Abuild-helper-maven-plugin"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
+                    "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
+                    "Coverage",
+                    "https://sonarcloud.io/summary/overall?id=com.github.robtimus%3Abuild-helper-maven-plugin"));
+
+            // Additional
+            verify(log).debug(Messages.siteIndex.removedBadgeWithLink(
+                    "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg?targetFile=pom.xml",
+                    "Known Vulnerabilities",
+                    "https://snyk.io/test/github/robtimus/build-helper-maven-plugin?targetFile=pom.xml"));
+            verify(log).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                    "https://snyk.io/test/github/robtimus/build-helper-maven-plugin/badge.svg?targetFile=pom.xml",
+                    "Known Vulnerabilities"));
+
+            verify(log, times(5)).debug(Messages.siteIndex.removedBadgeWithLink(
+                    "https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin",
+                    "Maven",
+                    "https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin"));
+            verify(log, times(5)).debug(Messages.siteIndex.removedBadgeWithoutLink(
+                    "https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Abuild-helper-maven-plugin&metric=coverage",
+                    "SonarCloud"));
+
+            verifyNoMoreInteractions(log);
+        }
+
+        @Test
+        @DisplayName("starting with badge")
+        void testStartingWithBadge() throws IOException {
+            String input = "[![Maven Central](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)]"
+                    + "(https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin)"
+                    + "\nThis line will remain";
+
+            assertEquals("This line will remain", mojo.removeBadges(input));
+        }
+
+        @Test
+        @DisplayName("ending with badge")
+        void testEndingWithBadge() throws IOException {
+            String input = "This line will remain\n"
+                    + "[![Maven Central](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)]"
+                    + "(https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin)";
+
+            assertEquals("This line will remain\n", mojo.removeBadges(input));
+        }
+
+        @Test
+        @DisplayName("ending with badge line")
+        void testEndingWithBadgeLine() throws IOException {
+            String input = "This line will remain\n"
+                    + "[![Maven Central](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)]"
+                    + "(https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin)"
+                    + "\n";
+
+            assertEquals("This line will remain\n", mojo.removeBadges(input));
+        }
+
+        @Test
+        @DisplayName("badge only")
+        void testBadgeOnly() throws IOException {
+            String input = "[![Maven Central](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)]"
+                    + "(https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin)";
+
+            assertEquals("", mojo.removeBadges(input));
+        }
+
+        @Test
+        @DisplayName("link with text and badge")
+        void testLinkWithTextAndBadge() throws IOException {
+            String input = "[this will remain ![Maven Central](https://img.shields.io/maven-central/v/com.github.robtimus/build-helper-maven-plugin)]"
+                    + "(https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin)";
+
+            assertEquals("[this will remain](https://search.maven.org/artifact/com.github.robtimus/build-helper-maven-plugin)",
+                    mojo.removeBadges(input));
+        }
     }
 }
