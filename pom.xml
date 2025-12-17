@@ -208,6 +208,9 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
         <version>${version.plugin.maven}</version>
+        <configuration>
+          <requiredJavaVersion>${version.java}</requiredJavaVersion>
+        </configuration>
         <executions>
           <execution>
             <phase>generate-sources</phase>
