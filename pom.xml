@@ -64,9 +64,9 @@
   <properties>
     <version.java>11</version.java>
 
-    <version.commons-io>2.20.0</version.commons-io>
-    <version.commons-lang>3.18.0</version.commons-lang>
-    <version.commonmark>0.27.0</version.commonmark>
+    <version.commons-io>2.21.0</version.commons-io>
+    <version.commons-lang>3.20.0</version.commons-lang>
+    <version.commonmark>0.27.1</version.commonmark>
     <version.junit-support>3.1</version.junit-support>
     <version.maven>3.9.5</version.maven>
     <version.maven-annotations>3.9.0</version.maven-annotations>
