@@ -27,7 +27,7 @@
   </parent>
 
   <artifactId>build-helper-maven-plugin</artifactId>
-  <version>2.0-SNAPSHOT</version>
+  <version>2.0</version>
   <packaging>maven-plugin</packaging>
 
   <name>build-helper-maven-plugin</name>
@@ -52,7 +52,7 @@
   <scm>
     <connection>scm:git:git@github.com:robtimus/build-helper-maven-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:robtimus/build-helper-maven-plugin.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>2.0</tag>
     <url>https://github.com/robtimus/build-helper-maven-plugin</url>
   </scm>
 
