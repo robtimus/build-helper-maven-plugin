@@ -68,8 +68,8 @@
     <version.commons-lang>3.20.0</version.commons-lang>
     <version.commonmark>0.28.0</version.commonmark>
     <version.junit-support>3.2</version.junit-support>
-    <version.maven>3.9.8</version.maven>
-    <version.maven-annotations>3.13.1</version.maven-annotations>
+    <version.maven>3.9.16</version.maven>
+    <version.maven-annotations>3.15.2</version.maven-annotations>
     <version.memory-fs>2.1</version.memory-fs>
 
     <version.plugin.maven>3.15.1</version.plugin.maven>
@@ -316,10 +316,19 @@
 
   <profiles>
     <profile>
+      <id>maven-3.9.8</id>
+
+      <properties>
+        <version.maven>3.9.8</version.maven>
+        <version.maven-annotations>3.13.1</version.maven-annotations>
+      </properties>
+    </profile>
+
+    <profile>
       <id>maven-4</id>
 
       <properties>
-        <version.maven>4.0.0-alpha-4</version.maven>
+        <version.maven>4.0.0-rc-5</version.maven>
       </properties>
     </profile>
   </profiles>
